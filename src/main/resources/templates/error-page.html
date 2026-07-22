@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ошибка — Temfex</title>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-hover: #4f46e5;
+            --bg: #f8fafc;
+            --card: #ffffff;
+            --text: #0f172a;
+            --text-muted: #64748b;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            background: var(--card);
+            padding: 40px;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+            width: 100%;
+            max-width: 500px;
+            text-align: center;
+        }
+        .logo { font-size: 24px; font-weight: bold; color: var(--primary); margin-bottom: 30px; }
+        .error-icon { font-size: 64px; margin-bottom: 20px; }
+        .error-message { color: #ef4444; font-size: 16px; margin-bottom: 25px; line-height: 1.5; }
+        .back-btn {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: background 0.3s;
+        }
+        .back-btn:hover { background-color: var(--primary-hover); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">Temfex </div>
+        <div class="error-icon"></div>
+        <div class="error-message" th:text="${error}">Произошла ошибка при обработке ссылки</div>
+        <button class="back-btn" onclick="window.location.href='/'">← На главную</button>
+    </div>
+</body>
+</html>
