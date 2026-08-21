@@ -19,9 +19,9 @@ public class RateLimitingFilter extends OncePerRequestFilter {
 
     private final Map<String, Bucket> buckets = new ConcurrentHashMap<>();
 
-    // Лимит: 10 запросов в минуту
+    // Увеличили лимит: 30 запросов в минуту (было 10)
     private final Bandwidth limit = Bandwidth.builder()
-            .capacity(10)
+            .capacity(30)
             .refillIntervally(1, Duration.ofMinutes(1))
             .build();
 
@@ -32,16 +32,28 @@ public class RateLimitingFilter extends OncePerRequestFilter {
             FilterChain filterChain
     ) throws ServletException, IOException {
 
-        String ip = getClientIP(request);
+        String requestPath = request.getRequestURI();
         
-        // В версии 8.x используем Bucket.builder()
+        // ИСКЛЮЧЕНИЯ: не применяем rate limiting к этим путям
+        if (requestPath.matches("/swagger-ui/.*") ||
+            requestPath.equals("/swagger-ui.html") ||
+            requestPath.matches("/v3/api-docs/.*") ||
+            requestPath.matches("/api-docs/.*") ||
+            requestPath.equals("/") ||
+            requestPath.equals("/index.html") ||
+            requestPath.matches("/.*\\.(html|css|js|png|jpg|ico)$") ||
+            requestPath.startsWith("/s/")) {  // Скачивание файлов не лимитируем
+            filterChain.doFilter(request, response);
+            return;
+        }
+
+        String ip = getClientIP(request);
         Bucket bucket = buckets.computeIfAbsent(ip, k -> Bucket.builder().addLimit(limit).build());
 
         if (bucket.tryConsume(1)) {
             filterChain.doFilter(request, response);
         } else {
-            // Используем прямой код 429 вместо константы
-            response.setStatus(429); 
+            response.setStatus(429);
             response.setContentType("application/json");
             response.setCharacterEncoding("UTF-8");
             response.getWriter().write("""
