@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/files")
@@ -16,23 +17,23 @@ public class FileController {
     private final FileStorageService fileStorageService;
 
     @PostMapping("/upload")
-    public ResponseEntity<FileUploadResponse> uploadFile(@RequestParam("file") MultipartFile file) {
-        if (file.isEmpty()) {
+    public ResponseEntity<FileUploadResponse> uploadFiles(@RequestParam("files") List<MultipartFile> files) {
+        if (files == null || files.isEmpty()) {
             return ResponseEntity.badRequest().body(
-                FileUploadResponse.builder()
-                    .message("Файл пустой")
-                    .build()
+                FileUploadResponse.builder().message("Файлы не выбраны").build()
             );
         }
 
-        FileEntity savedFile = fileStorageService.uploadFile(file);
+        FileEntity savedFile = fileStorageService.uploadMultipleFiles(files);
+
+        String message = files.size() == 1 ? "Файл успешно загружен" : "Архив успешно создан и загружен";
 
         FileUploadResponse response = FileUploadResponse.builder()
                 .fileId(savedFile.getId())
                 .originalName(savedFile.getOriginalName())
                 .mimeType(savedFile.getMimeType())
                 .size(savedFile.getSize())
-                .message("Файл успешно загружен")
+                .message(message)
                 .build();
 
         return ResponseEntity.ok(response);

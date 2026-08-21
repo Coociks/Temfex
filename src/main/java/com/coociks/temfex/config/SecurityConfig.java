@@ -1,30 +1,39 @@
 package com.coociks.temfex.config;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
 @EnableWebSecurity
+@RequiredArgsConstructor
 public class SecurityConfig {
 
-    @Bean
+    private final RateLimitingFilter rateLimitingFilter;
+    private final UploadRateLimitingFilter uploadRateLimitingFilter;
+
+   @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-            // Отключаем CSRF для упрощения работы с нашим фронтендом и API
             .csrf(csrf -> csrf.disable())
-            
-            // Делаем сессию stateless (без сохранения состояния), так как у нас пока нет полноценной авторизации
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            
-            // Настраиваем правила доступа
+            // Сначала фильтр для загрузок (более строгий)
+            .addFilterBefore(uploadRateLimitingFilter, UsernamePasswordAuthenticationFilter.class)
+            // Потом общий фильтр
+            .addFilterBefore(rateLimitingFilter, UploadRateLimitingFilter.class)
             .authorizeHttpRequests(auth -> auth
-                // Разрешаем доступ к главной странице, статике и всем нашим API без пароля
+                .requestMatchers(
+                    "/swagger-ui/**",
+                    "/swagger-ui.html",
+                    "/v3/api-docs/**",
+                    "/api-docs/**"
+                ).permitAll()
                 .requestMatchers("/", "/index.html", "/s/**", "/api/**").permitAll()
-                // Всё остальное (на будущее) требует авторизации
                 .anyRequest().authenticated()
             );
 

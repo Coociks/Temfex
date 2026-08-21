@@ -150,9 +150,19 @@
             </div>
         </div>
 
-        <!-- Форма для пароля (если нужен) -->
         <div th:if="${passwordRequired}" style="margin-bottom: 20px;">
             <input type="password" class="password-input" id="password" placeholder="Введите пароль для скачивания">
+        </div>
+
+        <div style="margin-bottom: 20px;">
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <input type="text" id="shareLink" readonly 
+                    style="flex: 1; padding: 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; background: #f1f5f9;"
+                    th:value="${'http://localhost:8080/s/' + shortId}">
+                <button id="copyBtn" style="padding: 12px 20px; background: #10b981; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">
+                    📋 Копировать
+                </button>
+            </div>
         </div>
 
         <!-- Кнопка скачивания с data-атрибутом для надёжной передачи shortId -->
@@ -160,13 +170,23 @@
             ⬇️ Скачать файл
         </button>
 
+        <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid var(--border);">
+            <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 15px;">📱 Отсканируйте QR-код для открытия на телефоне</p>
+            <img th:src="@{'/s/' + ${shortId} + '/qr'}" alt="QR-код" style="border: 1px solid var(--border); border-radius: 8px; padding: 10px; background: white;">
+            <div style="margin-top: 15px;">
+                <a th:href="@{'/s/' + ${shortId} + '/qr'}" download="qrcode.png" 
+                style="color: var(--primary); text-decoration: none; font-size: 14px; font-weight: 600;">
+                    ⬇️ Скачать QR-код
+                </a>
+            </div>
+        </div>
+
         <div class="footer">
             Файл будет автоматически удалён после истечения срока или лимита скачиваний
         </div</div>
     </div>
 
     <script>
-        // Надёжный способ получить shortId из data-атрибута кнопки
         const downloadBtn = document.getElementById('downloadBtn');
         const shortId = downloadBtn.dataset.shortid;
 
@@ -193,5 +213,20 @@
             }, 2000);
         });
     </script>
+
+    <script>
+        document.getElementById('copyBtn').addEventListener('click', function() {
+            const linkInput = document.getElementById('shareLink');
+            linkInput.select();
+            document.execCommand('copy');
+        
+            const btn = document.getElementById('copyBtn');
+            btn.textContent = '✅ Скопировано!';
+            setTimeout(() => {
+                btn.textContent = '📋 Копировать';
+            }, 2000);
+        });
+    </script>
+
 </body>
 </html>

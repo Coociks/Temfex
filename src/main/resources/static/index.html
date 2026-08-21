@@ -13,6 +13,7 @@
             --text: #0f172a;
             --text-muted: #64748b;
             --border: #e2e8f0;
+            --success: #10b981;
         }
 
         body {
@@ -33,7 +34,7 @@
             border-radius: 16px;
             box-shadow: 0 10px 25px rgba(0,0,0,0.05);
             width: 100%;
-            max-width: 500px;
+            max-width: 600px;
         }
 
         h1 {
@@ -95,7 +96,7 @@
 
         button {
             width: 100%;
-            padding: 12px;
+            padding: 14px;
             background-color: var(--primary);
             color: white;
             border: none;
@@ -106,7 +107,7 @@
             transition: background 0.3s;
         }
 
-        button:hover {
+        button:hover:not(:disabled) {
             background-color: var(--primary-hover);
         }
 
@@ -141,7 +142,7 @@
         .copy-btn {
             width: auto;
             padding: 10px 20px;
-            background: #10b981;
+            background: var(--success);
         }
         
         .copy-btn:hover { background: #059669; }
@@ -152,6 +153,10 @@
             font-size: 14px;
             color: var(--text-muted);
         }
+
+        #fileInput {
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -160,9 +165,9 @@
     <h1>Temfex </h1>
     
     <div class="drop-zone" id="dropZone">
-        <p>Перетащите файл сюда или кликните для выбора</p>
-        <input type="file" id="fileInput" hidden>
+        <p>Перетащите файлы сюда или кликните для выбора</p>
     </div>
+    <input type="file" id="fileInput" multiple>
 
     <div class="settings">
         <div class="setting-group">
@@ -201,7 +206,7 @@
     const shareLinkInput = document.getElementById('shareLink');
     const copyBtn = document.getElementById('copyBtn');
 
-    let selectedFile = null;
+    let selectedFiles = [];
 
     // Drag & Drop логика
     dropZone.addEventListener('click', () => fileInput.click());
@@ -219,47 +224,59 @@
         e.preventDefault();
         dropZone.classList.remove('dragover');
         if (e.dataTransfer.files.length) {
-            handleFile(e.dataTransfer.files[0]);
+            handleFiles(e.dataTransfer.files);
         }
     });
 
     fileInput.addEventListener('change', (e) => {
         if (e.target.files.length) {
-            handleFile(e.target.files[0]);
+            handleFiles(e.target.files);
         }
     });
 
-    function handleFile(file) {
-        selectedFile = file;
-        dropZone.querySelector('p').textContent = `Выбран файл: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+    function handleFiles(fileList) {
+        selectedFiles = Array.from(fileList);
+        
+        if (selectedFiles.length === 1) {
+            const file = selectedFiles[0];
+            dropZone.querySelector('p').textContent = `Выбран файл: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+        } else {
+            const totalSize = selectedFiles.reduce((acc, file) => acc + file.size, 0);
+            dropZone.querySelector('p').textContent = `Выбрано файлов: ${selectedFiles.length} (Общий размер: ${(totalSize / 1024).toFixed(1)} KB)`;
+        }
+        
         uploadBtn.disabled = false;
         resultDiv.classList.remove('show');
     }
 
-    // Загрузка файла
+    // Загрузка файлов
     uploadBtn.addEventListener('click', async () => {
-        if (!selectedFile) return;
+        if (selectedFiles.length === 0) return;
 
         uploadBtn.disabled = true;
-        statusDiv.textContent = ' Загрузка файла...';
+        statusDiv.textContent = '⏳ Загрузка файлов...';
         resultDiv.classList.remove('show');
 
         try {
-            // 1. Загружаем файл
             const formData = new FormData();
-            formData.append('file', selectedFile);
+            selectedFiles.forEach(file => {
+                formData.append('files', file); // Важно: ключ 'files' (множественное число)
+            });
 
             const uploadRes = await fetch('/api/files/upload', {
                 method: 'POST',
                 body: formData
             });
 
-            if (!uploadRes.ok) throw new Error('Ошибка загрузки файла');
-            const uploadData = await uploadRes.json();
+            if (!uploadRes.ok) {
+                const error = await uploadRes.json();
+                throw new Error(error.message || 'Ошибка загрузки');
+            }
 
+            const uploadData = await uploadRes.json();
             statusDiv.textContent = '⏳ Создание ссылки...';
 
-            // 2. Создаем ссылку
+            // Создаем ссылку
             const linkRes = await fetch('/api/links', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -270,17 +287,23 @@
                 })
             });
 
-            if (!linkRes.ok) throw new Error('Ошибка создания ссылки');
+            if (!linkRes.ok) {
+                const error = await linkRes.json();
+                throw new Error(error.message || 'Ошибка создания ссылки');
+            }
+
             const linkData = await linkRes.json();
 
-            // 3. Показываем результат
+            // Показываем результат
             const fullUrl = `${window.location.origin}${linkData.downloadUrl}`;
             shareLinkInput.value = fullUrl;
             resultDiv.classList.add('show');
             statusDiv.textContent = '✅ Готово!';
+            statusDiv.style.color = 'var(--success)';
 
         } catch (error) {
             statusDiv.textContent = `❌ Ошибка: ${error.message}`;
+            statusDiv.style.color = '#ef4444';
             uploadBtn.disabled = false;
         }
     });
